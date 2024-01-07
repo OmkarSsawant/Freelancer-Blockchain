@@ -75,4 +75,8 @@ contract Freelance {
                //make oracle or other contract request to check auth  
                 _;
         }
+
+    function getTotalDeposit() public view returns (uint _totalDeposit) {
+           _totalDeposit = total_deposit; 
+    }
 }

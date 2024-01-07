@@ -18,7 +18,6 @@ const DAY_millis =  24 * 60 * 60 * 1000;
   }
 
 
-  describe("Project Related Tests",()=>{
     it("Creates a project",async()=>{
       const freelance = await loadFixture(deployFixedContract);
       const signers = await ethers.getSigners();
@@ -37,7 +36,12 @@ const DAY_millis =  24 * 60 * 60 * 1000;
       console.log("Created Project");
       })
 
+      it("Matches Its balance to total Balance",async()=>{
+        const freelance = await loadFixture(deployFixedContract);
+        const totalDeposit =  await freelance.getTotalDeposit();
+       const balance = await  ethers.provider.getBalance(await freelance.getAddress())
+        expect(balance).to.eql(totalDeposit);
+      })
   })
 
 
-});
