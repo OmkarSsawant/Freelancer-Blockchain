@@ -13,7 +13,7 @@ contract Freelance {
         bytes32 title;
         uint initial_bid;
         bytes32 ssrdoc_ipfs;
-        bytes16 project_type;
+        bytes32 project_type;
         uint deadline;
         //A Bid Above this will not be fullfilled
         uint deposit_budget;
@@ -42,13 +42,16 @@ contract Freelance {
         bytes32 _title,
         uint _initial_bid,
         bytes32 _ssrdoc_ipfs,
-        bytes16 _project_type,
+        bytes32 _project_type,
         uint _deadline,
         uint _deposit_budget
     ) 
     authotizedByDao(_owner)
     payable public returns (bool _created){
             require(msg.value >= min_budget,"Budget is too low");
+            require(_ssrdoc_ipfs != "","SSR is required");
+            require(_deadline > block.timestamp,"Deadline should be in future");
+
             uint new_project_id =  owner_and_projects[_owner].length+1;
             Project memory new_project =  Project({
                 project_id:new_project_id,
