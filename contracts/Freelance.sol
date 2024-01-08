@@ -6,12 +6,13 @@ pragma solidity ^0.8.19;
 contract Freelance {
 
     event ProjectCreated(address owner,uint project_id);
+    event ProjectBidFinalized(address assigned_dev,uint project_id,uint amount);
 
     struct Project{
         uint project_id;
         address owner;
         bytes32 title;
-        uint initial_bid;
+        Bid finalized_bid;
         bytes32 ssrdoc_ipfs;
         bytes32 project_type;
         uint deadline;
@@ -24,6 +25,12 @@ contract Freelance {
         COMPLETED
     }
 
+struct Bid {
+       uint amount;
+       address bidder;
+       string proposal;
+       bytes32[] attachments; 
+}
     struct Work{
         bytes16 task;
         uint pay;
@@ -32,12 +39,12 @@ contract Freelance {
 
 
     struct Developer{
+        uint dev_id;
         address dev_address;
         bytes32 name;
         bytes32 profile_photo_ipfs;
         Review[] reviews;
         bytes32[] techstack;
-        uint bid_tokens;
         bytes32 profession;
     }
 
@@ -48,14 +55,19 @@ contract Freelance {
 
     uint immutable private min_budget=0.001 ether;
     uint private total_deposit=0 ether;
+    address private immutable platform_owner;
+    mapping(address => uint[]) private dev_and_projects;
     //A mapping having the works associated with project_id
     mapping(uint => Work[]) private work_and_pays;
+    //A mapping having the works associated with project_id
+    mapping(address => uint[]) private owner_and_projects;
+    mapping(address => uint) private dev_and_bidtokens;
 
     Project[] private projects;
-
+    Developer[] private developers;
 
     constructor() {
-        
+        platform_owner = msg.sender;
     }
    function idsToProjects(
         uint[] memory ids
@@ -67,11 +79,19 @@ contract Freelance {
         return _projects;
     }
 
+    function finalizeProjectBid(uint amount,uint project_id,string memory proposal,bytes32[] memory attachments,address developer)
+    isProjectOwner(project_id)
+    public returns (bool _finalized)
+    {
+        Project storage p  = projects[project_id];
+        p.finalized_bid = Bid(amount,developer,proposal,attachments);
+        emit ProjectBidFinalized(developer, project_id, amount);
+        _finalized = true;
+    } 
 
-    
+
 //About Project ==================================================
-  //A mapping having the works associated with project_id
-    mapping(address => uint[]) private owner_and_projects;
+  
 
         function createProject(
         address _owner,
@@ -89,17 +109,14 @@ contract Freelance {
             require(_deadline > block.timestamp,"Deadline should be in future");
 
             uint new_project_id =  owner_and_projects[_owner].length+1;
-            Project memory new_project =  Project({
-                project_id:new_project_id,
-                owner:_owner,
-                title:_title,
-                initial_bid:_initial_bid,
-                ssrdoc_ipfs:_ssrdoc_ipfs,
-                project_type:_project_type,
-                deadline:_deadline,
-                deposit_budget:_deposit_budget}
-            );
-        
+            Project memory new_project;
+            new_project.project_id=new_project_id;
+            new_project.owner=_owner;
+            new_project.title=_title;
+            new_project.ssrdoc_ipfs=_ssrdoc_ipfs;
+            new_project.project_type=_project_type;
+            new_project.deadline=_deadline;
+            new_project.deposit_budget=_deposit_budget;        
             projects.push(new_project);
             owner_and_projects[_owner].push(new_project_id);
             emit ProjectCreated(_owner,new_project_id);
@@ -113,6 +130,15 @@ contract Freelance {
                 _;
         }
 
+        modifier isProjectOwner(uint project_id){
+            require(projects[project_id].owner == msg.sender);    
+            _;
+        }
+
+        modifier onlyOwner{
+            require(msg.sender == platform_owner,"Only Platform Owner can Register Developers");
+            _;
+        }
   
  
 
@@ -129,8 +155,18 @@ contract Freelance {
 
 
 // About Developer ========================================================
-    mapping(address => uint[]) private dev_and_projects;
     
+    function registerDeveloper(
+        address dev_address,
+        bytes32 name,
+        bytes32 profile_photo_ipfs,
+        bytes32[] memory techstack,
+        bytes32 profession
+    )
+    public returns (bool _registered){
+            
+    }
+
      function getProjectsOfDev(
         address _dev
     ) 
@@ -152,5 +188,10 @@ contract Freelance {
            _totalDeposit = total_deposit; 
     }
 
+    function getDevBidTokens(
+        address dev
+    ) public view returns (uint){
+        return dev_and_bidtokens[dev];
+    }
     
 }
