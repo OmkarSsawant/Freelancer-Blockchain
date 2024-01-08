@@ -2,3 +2,4 @@
 
 #### Notes
 * Let the bids be handled by web2.0
+* 10 bid tokens reward on project completion

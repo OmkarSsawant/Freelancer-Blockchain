@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
-
+import "hardhat/console.sol";
 
 
 contract Freelance {
@@ -109,15 +109,7 @@ struct Bid {
         return _projects;
     }
 
-    function finalizeProjectBid(uint amount,uint project_id,string memory proposal,bytes32[] memory attachments,address developer)
-    isProjectOwner(project_id)
-    public returns (bool _finalized)
-    {
-        Project storage p  = projects[project_id];
-        p.finalized_bid = Bid(amount,developer,proposal,attachments);
-        emit ProjectBidFinalized(developer, project_id, amount);
-        _finalized = true;
-    } 
+
 // About Project Owner
 
 function registerProjectOwner(
@@ -133,7 +125,7 @@ function registerProjectOwner(
         bytes32 _profile_photo_ipfs
 )  authorizedByDao(_wallet) public returns (bool _registered) {
     ProjectOwner memory po ;
-    po.owner_id = project_owners.length+1;
+    po.owner_id = project_owners.length;
     po.name = _name;
     po.email = _email;
     po.phn = _phn;
@@ -149,6 +141,15 @@ function registerProjectOwner(
     _registered  = true;
 }
 
+    function finalizeProjectBid(uint amount,uint project_id,string memory proposal,bytes32[] memory attachments,address developer)
+    isProjectOwner(project_id)
+    public returns (bool _finalized)
+    {
+        Project storage p  = projects[project_id];
+        p.finalized_bid = Bid(amount,developer,proposal,attachments);
+        emit ProjectBidFinalized(developer, project_id, amount);
+        _finalized = true;
+    } 
 
 function updateProjectStatus(
     uint project_id
@@ -177,6 +178,8 @@ isProjectOwner(_project_id)
     address dev_adr = projects[_project_id].finalized_bid.bidder;
     dev_project_reviews[dev_adr].push(Review(_project_id,_r));
     projects[_project_id].status = WorkStatus.COMPLETED;
+    dev_and_bidtokens[dev_adr]+=10;
+    dev_and_projects[dev_adr].push(_project_id);
     _process_completed = true;
 }
 
@@ -197,7 +200,7 @@ isProjectOwner(_project_id)
             require(_ssrdoc_ipfs != "","SSR is required");
             require(_deadline > block.timestamp,"Deadline should be in future");
 
-            uint new_project_id =  owner_and_projects[_owner].length+1;
+            uint new_project_id =  owner_and_projects[_owner].length;
             Project memory new_project;
             new_project.project_id=new_project_id;
             new_project.owner=_owner;
@@ -209,6 +212,7 @@ isProjectOwner(_project_id)
             projects.push(new_project);
             owner_and_projects[_owner].push(new_project_id);
             emit ProjectCreated(_owner,new_project_id);
+            
             _created = true;
     }
 
@@ -248,6 +252,7 @@ isProjectOwner(_project_id)
     authorizedByDao(_owner) 
     public  view returns (Project[] memory){
         uint[] memory project_ids = owner_and_projects[_owner];
+        
         return idsToProjects(project_ids);
     }
 
@@ -264,10 +269,10 @@ isProjectOwner(_project_id)
         bytes32[] memory _techstack,
         bytes32 _profession
     )
-    public returns (bool _registered){
+    public returns (bool ){
             Developer memory dev ;
             
-            dev.dev_id = developers.length+1;
+            dev.dev_id = developers.length;
             dev.dev_address = msg.sender;
             dev.name = _name;
             dev.profile_photo_ipfs = _profile_photo_ipfs;
@@ -275,7 +280,9 @@ isProjectOwner(_project_id)
             dev.profession = _profession;
             developers.push(dev);
             dev_and_id[msg.sender] = dev.dev_id;
-            _registered = true;
+            dev_and_bidtokens[msg.sender]  = 50;
+            return true;
+
     }
 
     //starting the work signifies that dev has signed the agreement
@@ -313,7 +320,14 @@ isProjectOwner(_project_id)
         return dev_and_bidtokens[dev];
     }
     
-
+ function devPlaceBids(
+        address dev,
+        uint count
+    ) public  returns (bool){
+        dev_and_bidtokens[dev]-=count;
+        return true;
+    }
+    
   receive() external payable{}
 
 
