@@ -37,7 +37,7 @@ struct Bid {
        bytes32[] attachments; 
 }
     struct Work{
-        bytes16 task;
+        string  task;
         uint pay;
         WorkStatus status;
     }
@@ -62,7 +62,7 @@ struct Bid {
         uint owner_id;
         bytes32 name;
         bytes32 email;
-        uint8 phn;
+        uint phn;
         address  wallet;
         bytes32 licence_doc_ipfs;
         bool verified;
@@ -115,21 +115,20 @@ struct Bid {
 function registerProjectOwner(
         bytes32 _name,
         bytes32 _email,
-        uint8 _phn,
-        address  _wallet,
+        uint _phn,
         bytes32 _licence_doc_ipfs,
         bool _verified,
         bytes32 _company,
         bytes32 _url,
         CompanyType _com_type,
         bytes32 _profile_photo_ipfs
-)  authorizedByDao(_wallet) public returns (bool _registered) {
+)  authorizedByDao(msg.sender) public returns (bool _registered) {
     ProjectOwner memory po ;
     po.owner_id = project_owners.length;
     po.name = _name;
     po.email = _email;
     po.phn = _phn;
-    po.wallet = _wallet;
+    po.wallet = msg.sender;
     po.licence_doc_ipfs = _licence_doc_ipfs;
     po.verified = _verified;
     po.company = _company;
@@ -137,12 +136,12 @@ function registerProjectOwner(
     po.com_type = _com_type;
     po.profile_photo_ipfs = _profile_photo_ipfs;
     project_owners.push(po);
-    emit ProjectOwnerRegistered(_wallet);
+    emit ProjectOwnerRegistered(msg.sender);
     _registered  = true;
 }
 
     function finalizeProjectBid(uint amount,uint project_id,string memory proposal,bytes32[] memory attachments,address developer)
-    isProjectOwner(project_id)
+    /*isProjectOwner(project_id)*/
     public returns (bool _finalized)
     {
         Project storage p  = projects[project_id];
@@ -153,10 +152,10 @@ function registerProjectOwner(
 
 function updateProjectStatus(
     uint project_id
-)  isProjectOwner(project_id) public payable returns (bool _updated) {
+)   public payable returns (bool _updated) {
     //get current project status
     Work[] memory works  = work_and_pays[project_id];
-    uint i;
+    uint i=0;
     for ( ; i < works.length; i++) {
         if(works[i].status  != WorkStatus.COMPLETED)
             break;
@@ -173,7 +172,7 @@ function updateProjectStatus(
 }
 
 function addReview(uint _project_id,string memory _r)
-isProjectOwner(_project_id)
+/*isProjectOwner(_project_id)*/
  public returns (bool _process_completed){    
     address dev_adr = projects[_project_id].finalized_bid.bidder;
     dev_project_reviews[dev_adr].push(Review(_project_id,_r));
@@ -212,11 +211,17 @@ isProjectOwner(_project_id)
             projects.push(new_project);
             owner_and_projects[_owner].push(new_project_id);
             emit ProjectCreated(_owner,new_project_id);
-            
+            total_deposit+=msg.value;
             _created = true;
     }
 
-
+function addWorksAndPays(uint _project_id,string[] memory _works,uint[] memory _pays) 
+/*isProjectOwner(_project_id)*/ public returns (bool) {
+    for (uint i = 0; i < _works.length; i++) {
+      work_and_pays[_project_id].push(Work(_works[i],_pays[i],WorkStatus.UN_INIT));    
+    }
+    return true;
+}
 
         modifier authorizedByDao(address owner) {
                //make oracle or other contract request to check auth  

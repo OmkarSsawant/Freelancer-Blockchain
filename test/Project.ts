@@ -86,7 +86,13 @@ describe("Freelance Contract", () => {
       expect(await freelance.getProjectsOfOwner(owner)).not.empty;
     });
 
-
+    it("Adds Works and assoc. payment",async ()=> {
+      expect((await(   await freelance.addWorksAndPays(0,["Create UI/UX","Develop App","Publish App"],[
+        ethers.parseEther("0.001"),
+        ethers.parseEther("0.002"),
+        ethers.parseEther("0.003"),
+       ])).wait())?.status).eq(1);
+    })
    
   });
 });

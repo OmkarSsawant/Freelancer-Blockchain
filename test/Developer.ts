@@ -20,6 +20,7 @@ describe("Developer Tests", ()=>{
         freelance = await loadFixture(deployFixedContract);
 
         const signers = await ethers.getSigners();
+        
           const deadline = BigInt(Date.now() + 2 * DAY_millis);
           const cp1 = await freelance.createProject(
             signers[1].address,
@@ -40,12 +41,14 @@ describe("Developer Tests", ()=>{
             ethers.parseEther("0.02"),
             { value: ethers.parseEther("0.002") }
           );
-          
+          const dev = (await ethers.getSigners())[2]
+        freelance.attach(dev)
       });
     
 
     // freelance.attach(dev)
     it("Registers Developer",async()=> {
+      
         expect((await (await  freelance.registerDeveloper(
             ethers.encodeBytes32String("Sam Altman"),
             ethers.encodeBytes32String("ipfs://devloper_profile_photo"),
