@@ -7,6 +7,8 @@ contract Freelance {
 
     event ProjectCreated(address owner,uint project_id);
     event ProjectBidFinalized(address assigned_dev,uint project_id,uint amount);
+    event ProjectOwnerRegistered(address owner);
+
 
     struct Project{
         uint project_id;
@@ -56,6 +58,29 @@ struct Bid {
         string review;
     }
 
+
+    struct ProjectOwner{
+        uint owner_id;
+        bytes32 name;
+        bytes32 email;
+        uint8 phn;
+        address  wallet;
+        bytes32 licence_doc_ipfs;
+        bool verified;
+        bytes32 company;
+        bytes32 url;
+        CompanyType com_type;
+        bytes32 profile_photo_ipfs;
+    }
+    
+    enum CompanyType{
+        PRIVATE,
+        PUBLIC,
+        STARTUP,
+        UNICORN,
+        SMALL_BUSINESS
+    }
+
     uint immutable private min_budget=0.001 ether;
     uint private total_deposit=0 ether;
     address private immutable platform_owner;
@@ -66,6 +91,7 @@ struct Bid {
     mapping(address => uint[]) private owner_and_projects;
     mapping(address => uint) private dev_and_bidtokens;
 
+    ProjectOwner[] private project_owners;
     Project[] private projects;
     Developer[] private developers;
 
@@ -91,7 +117,51 @@ struct Bid {
         emit ProjectBidFinalized(developer, project_id, amount);
         _finalized = true;
     } 
+// About Project Owner
 
+function registerProjectOwner(
+        bytes32 _name,
+        bytes32 _email,
+        uint8 _phn,
+        address  _wallet,
+        bytes32 _licence_doc_ipfs,
+        bool _verified,
+        bytes32 _company,
+        bytes32 _url,
+        CompanyType _com_type,
+        bytes32 _profile_photo_ipfs
+)  authorizedByDao(_wallet) public returns (bool _registered) {
+    ProjectOwner memory po ;
+    po.owner_id = project_owners.length+1;
+    po.name = _name;
+    po.email = _email;
+    po.phn = _phn;
+    po.wallet = _wallet;
+    po.licence_doc_ipfs = _licence_doc_ipfs;
+    po.verified = _verified;
+    po.company = _company;
+    po.url = _url;
+    po.com_type = _com_type;
+    po.profile_photo_ipfs = _profile_photo_ipfs;
+    project_owners.push(po);
+    emit ProjectOwnerRegistered(_wallet);
+    _registered  = true;
+}
+
+
+function updateProjectStatus(
+    uint project_id
+)  isProjectOwner(project_id) returns (bool _updated) {
+    //get current project status
+    Work[] storage works  = work_and_pays[project_id];
+    for (uint i = 0; i < works.length; i++) {
+        // if(works[i])
+    }
+
+    //pay the developer its part 
+    //update to next stage
+    _updated=  true;
+}
 
 //About Project ==================================================
   
@@ -105,7 +175,7 @@ struct Bid {
         uint _deadline,
         uint _deposit_budget
     ) 
-    authotizedByDao(_owner)
+    isRegisteredProjectOwner
     payable public returns (bool _created){
             require(msg.value >= min_budget,"Budget is too low");
             require(_ssrdoc_ipfs != "","SSR is required");
@@ -128,13 +198,18 @@ struct Bid {
 
 
 
-        modifier authotizedByDao(address owner) {
+        modifier authorizedByDao(address owner) {
                //make oracle or other contract request to check auth  
                 _;
         }
 
         modifier isProjectOwner(uint project_id){
             require(projects[project_id].owner == msg.sender);    
+            _;
+        }
+
+        modifier isRegisteredProjectOwner{
+            //check in project owners list
             _;
         }
 
@@ -154,12 +229,11 @@ struct Bid {
      function getProjectsOfOwner(
         address _owner
     ) 
-    authotizedByDao(_owner) 
+    authorizedByDao(_owner) 
     public  view returns (Project[] memory){
         uint[] memory project_ids = owner_and_projects[_owner];
         return idsToProjects(project_ids);
     }
-
 
 
 
@@ -194,7 +268,7 @@ struct Bid {
      function getProjectsOfDev(
         address _dev
     ) 
-    authotizedByDao(_dev) 
+    authorizedByDao(_dev) 
     public view returns (Project[] memory){
         uint[] memory project_ids = dev_and_projects[_dev];
         return idsToProjects(project_ids);
@@ -203,7 +277,7 @@ struct Bid {
      function getCompletedProjectsCountOfDev(
         address _dev
     ) 
-    authotizedByDao(_dev) 
+    authorizedByDao(_dev) 
     public view returns (uint){
         uint[] memory project_ids = dev_and_projects[_dev];
         return project_ids.length;
