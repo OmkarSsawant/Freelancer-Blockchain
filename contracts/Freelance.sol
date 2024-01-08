@@ -18,8 +18,11 @@ contract Freelance {
         uint deadline;
         //A Bid Above this will not be fullfilled
         uint deposit_budget;
+        WorkStatus status;
     }
+
     enum WorkStatus {
+        UN_INIT,
         STARTED,
         IN_PROGRESS,
         COMPLETED
@@ -139,6 +142,12 @@ struct Bid {
             require(msg.sender == platform_owner,"Only Platform Owner can Register Developers");
             _;
         }
+
+        modifier onlyDev{
+                
+            _;
+        }
+
   
  
 
@@ -157,14 +166,29 @@ struct Bid {
 // About Developer ========================================================
     
     function registerDeveloper(
-        address dev_address,
-        bytes32 name,
-        bytes32 profile_photo_ipfs,
-        bytes32[] memory techstack,
-        bytes32 profession
+        address _dev_address,
+        bytes32 _name,
+        bytes32 _profile_photo_ipfs,
+        bytes32[] memory _techstack,
+        bytes32 _profession
     )
     public returns (bool _registered){
-            
+            Developer memory dev ;
+            dev.dev_id = developers.length+1;
+            dev.dev_address = _dev_address;
+            dev.name = _name;
+            dev.profile_photo_ipfs = _profile_photo_ipfs;
+            dev.techstack = _techstack;
+            dev.profession = _profession;
+            developers.push(dev);
+            _registered = true;
+    }
+
+    //starting the work signifies that dev has signed the agreement
+    function signAgreement(uint project_id) public onlyDev returns (bool _success) {
+        Project storage p = projects[project_id];
+        p.status = WorkStatus.STARTED;
+        _success = true;
     }
 
      function getProjectsOfDev(
