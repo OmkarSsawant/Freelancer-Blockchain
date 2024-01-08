@@ -18,10 +18,32 @@ contract Freelance {
         //A Bid Above this will not be fullfilled
         uint deposit_budget;
     }
+    enum WorkStatus {
+        STARTED,
+        IN_PROGRESS,
+        COMPLETED
+    }
 
     struct Work{
         bytes16 task;
         uint pay;
+        WorkStatus status;
+    }
+
+
+    struct Developer{
+        address dev_address;
+        bytes32 name;
+        bytes32 profile_photo_ipfs;
+        Review[] reviews;
+        bytes32[] techstack;
+        uint bid_tokens;
+        bytes32 profession;
+    }
+
+    struct Review{
+        uint project_id;
+        string review;
     }
 
     uint immutable private min_budget=0.001 ether;
@@ -29,13 +51,27 @@ contract Freelance {
     //A mapping having the works associated with project_id
     mapping(uint => Work[]) private work_and_pays;
 
-    //A mapping having the works associated with project_id
-    mapping(address => Project[]) private owner_and_projects;
+    Project[] private projects;
 
 
     constructor() {
         
     }
+   function idsToProjects(
+        uint[] memory ids
+    ) internal view returns (Project[] memory){
+        Project[] memory _projects = new Project[](ids.length);
+        for (uint i = 0; i < ids.length; i++) {
+            _projects[i] = projects[ids[i]];
+        }
+        return _projects;
+    }
+
+
+    
+//About Project ==================================================
+  //A mapping having the works associated with project_id
+    mapping(address => uint[]) private owner_and_projects;
 
         function createProject(
         address _owner,
@@ -64,7 +100,8 @@ contract Freelance {
                 deposit_budget:_deposit_budget}
             );
         
-            owner_and_projects[_owner].push(new_project);
+            projects.push(new_project);
+            owner_and_projects[_owner].push(new_project_id);
             emit ProjectCreated(_owner,new_project_id);
             _created = true;
     }
@@ -76,7 +113,44 @@ contract Freelance {
                 _;
         }
 
+  
+ 
+
+     function getProjectsOfOwner(
+        address _owner
+    ) 
+    authotizedByDao(_owner) 
+    public  view returns (Project[] memory){
+        uint[] memory project_ids = owner_and_projects[_owner];
+        return idsToProjects(project_ids);
+    }
+
+
+
+
+// About Developer ========================================================
+    mapping(address => uint[]) private dev_and_projects;
+    
+     function getProjectsOfDev(
+        address _dev
+    ) 
+    authotizedByDao(_dev) 
+    public view returns (Project[] memory){
+        uint[] memory project_ids = dev_and_projects[_dev];
+        return idsToProjects(project_ids);
+    }
+
+     function getCompletedProjectsCountOfDev(
+        address _dev
+    ) 
+    authotizedByDao(_dev) 
+    public view returns (uint){
+        uint[] memory project_ids = dev_and_projects[_dev];
+        return project_ids.length;
+    }
     function getTotalDeposit() public view returns (uint _totalDeposit) {
            _totalDeposit = total_deposit; 
     }
+
+    
 }

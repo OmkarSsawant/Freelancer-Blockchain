@@ -42,6 +42,15 @@ const DAY_millis =  24 * 60 * 60 * 1000;
        const balance = await  ethers.provider.getBalance(await freelance.getAddress())
         expect(balance).to.eql(totalDeposit);
       })
+
+
+      it("Get Projects of owner ",async ()=> {
+        const freelance = await loadFixture(deployFixedContract);
+        const owner = (await ethers.getSigners())[1];
+        expect(await freelance.getProjectsOfOwner(owner)).not.null;
+      })
+
+      
   })
 
 
