@@ -8,7 +8,7 @@ contract Freelance {
     event ProjectCreated(address owner,uint project_id);
     event ProjectBidFinalized(address assigned_dev,uint project_id,uint amount);
     event ProjectOwnerRegistered(address owner);
-
+    event EnableProjectChat(address owner,address developer,uint project_id);
 
     struct Project{
         uint project_id;
@@ -85,6 +85,7 @@ struct Bid {
     uint private total_deposit=0 ether;
     address private immutable platform_owner;
     mapping(address => uint[]) private dev_and_projects;
+    mapping(address => uint) private dev_and_id;
     //A mapping having the works associated with project_id
     mapping(uint => Work[]) private work_and_pays;
     //A mapping having the works associated with project_id
@@ -151,16 +152,32 @@ function registerProjectOwner(
 
 function updateProjectStatus(
     uint project_id
-)  isProjectOwner(project_id) returns (bool _updated) {
+)  isProjectOwner(project_id) public payable returns (bool _updated) {
     //get current project status
-    Work[] storage works  = work_and_pays[project_id];
-    for (uint i = 0; i < works.length; i++) {
-        // if(works[i])
+    Work[] memory works  = work_and_pays[project_id];
+    uint i;
+    for ( ; i < works.length; i++) {
+        if(works[i].status  != WorkStatus.COMPLETED)
+            break;
     }
-
     //pay the developer its part 
+    uint amount = works[i].pay;
+    address payable assigned_dev = payable(projects[project_id].finalized_bid.bidder);
+    (bool success,) = assigned_dev.call{value:amount}(""); 
+    require(success,"Payment Failed");
     //update to next stage
+    Work storage w = work_and_pays[project_id][i];
+    w.status = WorkStatus.COMPLETED;
     _updated=  true;
+}
+
+function addReview(uint _project_id,string memory _r) public returns (bool _process_completed){
+    Review memory rev = Review(_project_id,_r);
+    address dev_adr = projects[_project_id].finalized_bid.bidder;
+    Developer storage dev= developers[dev_and_id[dev_adr]];
+    dev.reviews.push(rev);
+    projects[_project_id].status = WorkStatus.COMPLETED;
+    _process_completed = true;
 }
 
 //About Project ==================================================
@@ -235,12 +252,14 @@ function updateProjectStatus(
         return idsToProjects(project_ids);
     }
 
+    function getProjectStatus(uint project_id) public view returns (WorkStatus) {
+          return projects[project_id].status;  
+    }
 
 
 // About Developer ========================================================
     
     function registerDeveloper(
-        address _dev_address,
         bytes32 _name,
         bytes32 _profile_photo_ipfs,
         bytes32[] memory _techstack,
@@ -249,12 +268,13 @@ function updateProjectStatus(
     public returns (bool _registered){
             Developer memory dev ;
             dev.dev_id = developers.length+1;
-            dev.dev_address = _dev_address;
+            dev.dev_address = msg.sender;
             dev.name = _name;
             dev.profile_photo_ipfs = _profile_photo_ipfs;
             dev.techstack = _techstack;
             dev.profession = _profession;
             developers.push(dev);
+            dev_and_id[msg.sender] = dev.dev_id;
             _registered = true;
     }
 
@@ -262,6 +282,7 @@ function updateProjectStatus(
     function signAgreement(uint project_id) public onlyDev returns (bool _success) {
         Project storage p = projects[project_id];
         p.status = WorkStatus.STARTED;
+        emit EnableProjectChat(p.owner,msg.sender,project_id);
         _success = true;
     }
 
@@ -292,4 +313,8 @@ function updateProjectStatus(
         return dev_and_bidtokens[dev];
     }
     
+
+  receive() external payable{}
+
+
 }
