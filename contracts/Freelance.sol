@@ -48,7 +48,6 @@ struct Bid {
         address dev_address;
         bytes32 name;
         bytes32 profile_photo_ipfs;
-        Review[] reviews;
         bytes32[] techstack;
         bytes32 profession;
     }
@@ -86,6 +85,7 @@ struct Bid {
     address private immutable platform_owner;
     mapping(address => uint[]) private dev_and_projects;
     mapping(address => uint) private dev_and_id;
+    mapping(address => Review[]) private dev_project_reviews;
     //A mapping having the works associated with project_id
     mapping(uint => Work[]) private work_and_pays;
     //A mapping having the works associated with project_id
@@ -171,11 +171,11 @@ function updateProjectStatus(
     _updated=  true;
 }
 
-function addReview(uint _project_id,string memory _r) public returns (bool _process_completed){
-    Review memory rev = Review(_project_id,_r);
+function addReview(uint _project_id,string memory _r)
+isProjectOwner(_project_id)
+ public returns (bool _process_completed){    
     address dev_adr = projects[_project_id].finalized_bid.bidder;
-    Developer storage dev= developers[dev_and_id[dev_adr]];
-    dev.reviews.push(rev);
+    dev_project_reviews[dev_adr].push(Review(_project_id,_r));
     projects[_project_id].status = WorkStatus.COMPLETED;
     _process_completed = true;
 }
@@ -186,7 +186,6 @@ function addReview(uint _project_id,string memory _r) public returns (bool _proc
         function createProject(
         address _owner,
         bytes32 _title,
-        uint _initial_bid,
         bytes32 _ssrdoc_ipfs,
         bytes32 _project_type,
         uint _deadline,
@@ -267,6 +266,7 @@ function addReview(uint _project_id,string memory _r) public returns (bool _proc
     )
     public returns (bool _registered){
             Developer memory dev ;
+            
             dev.dev_id = developers.length+1;
             dev.dev_address = msg.sender;
             dev.name = _name;
