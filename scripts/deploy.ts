@@ -4,7 +4,7 @@ async function deployFreelanceContract(){
   const owner = (await ethers.getSigners())[0];
   const contractReq = await ethers.deployContract("Freelance",owner);
   const freelance = await contractReq.waitForDeployment()
-  console.log("Freelance Contract Deplyed at ",freelance);
+  console.log("Freelance Contract Deplyed at ",await freelance.getAddress());
 }
 
 

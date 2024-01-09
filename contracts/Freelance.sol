@@ -99,6 +99,10 @@ struct Bid {
     constructor() {
         platform_owner = msg.sender;
     }
+
+    function getName() public pure returns (string memory){
+        return "Freelance.sol";
+    }
    function idsToProjects(
         uint[] memory ids
     ) internal view returns (Project[] memory){
@@ -108,6 +112,7 @@ struct Bid {
         }
         return _projects;
     }
+
 
 
 // About Project Owner
