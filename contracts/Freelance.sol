@@ -15,11 +15,12 @@ contract Freelance {
         address owner;
         bytes32 title;
         Bid finalized_bid;
-        bytes32 ssrdoc_ipfs;
         bytes32 project_type;
         uint deadline;
         //A Bid Above this will not be fullfilled
         uint deposit_budget;
+        string short_description;
+
         WorkStatus status;
     }
 
@@ -80,6 +81,14 @@ struct Bid {
         SMALL_BUSINESS
     }
 
+    struct ProjectDetails {
+        string description;
+        bytes32[] techstack;
+        string eligiblity_criteria;
+        string[] roles;
+        bytes32 ssr_doc_ipfs;
+    }
+
     uint immutable private min_budget=0.001 ether;
     uint private total_deposit=0 ether;
     address private immutable platform_owner;
@@ -91,6 +100,8 @@ struct Bid {
     //A mapping having the works associated with project_id
     mapping(address => uint[]) private owner_and_projects;
     mapping(address => uint) private dev_and_bidtokens;
+
+    mapping(uint => ProjectDetails) private project_details;
 
     ProjectOwner[] private project_owners;
     Project[] private projects;
@@ -193,15 +204,14 @@ function addReview(uint _project_id,string memory _r)
         function createProject(
         address _owner,
         bytes32 _title,
-        bytes32 _ssrdoc_ipfs,
         bytes32 _project_type,
         uint _deadline,
-        uint _deposit_budget
+        uint _deposit_budget,
+        string memory _short_desc
     ) 
     isRegisteredProjectOwner
     payable public returns (bool _created){
             require(msg.value >= min_budget,"Budget is too low");
-            require(_ssrdoc_ipfs != "","SSR is required");
             require(_deadline > block.timestamp,"Deadline should be in future");
 
             uint new_project_id =  owner_and_projects[_owner].length;
@@ -209,7 +219,7 @@ function addReview(uint _project_id,string memory _r)
             new_project.project_id=new_project_id;
             new_project.owner=_owner;
             new_project.title=_title;
-            new_project.ssrdoc_ipfs=_ssrdoc_ipfs;
+            new_project.short_description = _short_desc;
             new_project.project_type=_project_type;
             new_project.deadline=_deadline;
             new_project.deposit_budget=_deposit_budget;        
@@ -220,6 +230,24 @@ function addReview(uint _project_id,string memory _r)
             _created = true;
     }
 
+    function addProjectDetails(
+        uint project_id,
+           string memory _description,
+        bytes32[] memory  _techstack,
+        bytes32 _ssrdoc_ipfs,
+        string memory _eligiblity_criteria,
+        string[] memory _roles
+    )public returns (bool){
+            require(_ssrdoc_ipfs != "","SSR is required");
+            project_details[project_id] =  ProjectDetails(
+           _description,
+          _techstack,
+         _eligiblity_criteria,
+         _roles,_ssrdoc_ipfs
+            );
+        return true;
+    }
+
 function addWorksAndPays(uint _project_id,string[] memory _works,uint[] memory _pays) 
 /*isProjectOwner(_project_id)*/ public returns (bool) {
     for (uint i = 0; i < _works.length; i++) {
@@ -227,6 +255,10 @@ function addWorksAndPays(uint _project_id,string[] memory _works,uint[] memory _
     }
     return true;
 }
+
+    function getProjectDetails(uint project_id) public view returns (ProjectDetails memory){
+            return project_details[project_id];
+    }
 
         modifier authorizedByDao(address owner) {
                //make oracle or other contract request to check auth  
@@ -337,7 +369,25 @@ function addWorksAndPays(uint _project_id,string[] memory _works,uint[] memory _
         dev_and_bidtokens[dev]-=count;
         return true;
     }
+
+    function getProjects() public view returns (Project[] memory){
+        return projects;
+    }
     
+
+    function getOngoingTaskAndPaymentTillNow(uint project_id) public view returns (string memory,uint,uint){
+    Work[] memory works  = work_and_pays[project_id];
+    require(works.length > 0 ,"A Project Should have atleast one task");
+    uint i=0;
+    uint pay_till_now=0;
+    for ( ; i < works.length; i++) {
+        if(works[i].status  != WorkStatus.COMPLETED)
+            break;
+        pay_till_now += works[i].pay;
+    }
+    
+    return (works[i].task,works[i].pay,pay_till_now);
+    }
   receive() external payable{}
 
 
