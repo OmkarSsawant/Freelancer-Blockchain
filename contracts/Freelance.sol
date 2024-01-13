@@ -99,6 +99,8 @@ struct Bid {
     mapping(uint => Work[]) private work_and_pays;
     //A mapping having the works associated with project_id
     mapping(address => uint[]) private owner_and_projects;
+    mapping(address => int) private owner_and_recent_project_id;
+
     mapping(address => uint) private dev_and_bidtokens;
 
     mapping(uint => ProjectDetails) private project_details;
@@ -181,6 +183,7 @@ function updateProjectStatus(
     address payable assigned_dev = payable(projects[project_id].finalized_bid.bidder);
     (bool success,) = assigned_dev.call{value:amount}(""); 
     require(success,"Payment Failed");
+
     //update to next stage
     Work storage w = work_and_pays[project_id][i];
     w.status = WorkStatus.COMPLETED;
@@ -202,7 +205,6 @@ function addReview(uint _project_id,string memory _r)
   
 
         function createProject(
-        address _owner,
         bytes32 _title,
         bytes32 _project_type,
         uint _deadline,
@@ -214,44 +216,51 @@ function addReview(uint _project_id,string memory _r)
             require(msg.value >= min_budget,"Budget is too low");
             require(_deadline > block.timestamp,"Deadline should be in future");
 
-            uint new_project_id =  owner_and_projects[_owner].length;
+            uint new_project_id =  owner_and_projects[msg.sender].length;
             Project memory new_project;
             new_project.project_id=new_project_id;
-            new_project.owner=_owner;
+            new_project.owner=msg.sender;
             new_project.title=_title;
             new_project.short_description = _short_desc;
             new_project.project_type=_project_type;
             new_project.deadline=_deadline;
             new_project.deposit_budget=_deposit_budget;        
             projects.push(new_project);
-            owner_and_projects[_owner].push(new_project_id);
-            emit ProjectCreated(_owner,new_project_id);
+            owner_and_projects[msg.sender].push(new_project_id);
+            emit ProjectCreated(msg.sender,new_project_id);
+            owner_and_recent_project_id[msg.sender] = int(new_project_id);
             total_deposit+=msg.value;
             _created = true;
     }
 
     function addProjectDetails(
-        uint project_id,
            string memory _description,
         bytes32[] memory  _techstack,
         bytes32 _ssrdoc_ipfs,
         string memory _eligiblity_criteria,
-        string[] memory _roles
+        string[] memory _roles,
+        string[] memory _works,uint[] memory _pays
     )public returns (bool){
+       int _recent_project_id = owner_and_recent_project_id[msg.sender];     
+            require(_recent_project_id!=-1,"A Core Project Failed to be created");
             require(_ssrdoc_ipfs != "","SSR is required");
-            project_details[project_id] =  ProjectDetails(
+            project_details[uint(_recent_project_id)] =  ProjectDetails(
            _description,
           _techstack,
          _eligiblity_criteria,
          _roles,_ssrdoc_ipfs
             );
+            addWorksAndPays(_works,_pays);
+            owner_and_recent_project_id[msg.sender] = -1;
         return true;
     }
 
-function addWorksAndPays(uint _project_id,string[] memory _works,uint[] memory _pays) 
-/*isProjectOwner(_project_id)*/ public returns (bool) {
+function addWorksAndPays(string[] memory _works,uint[] memory _pays) 
+/*isProjectOwner(_project_id)*/ internal returns (bool) {
+       int _recent_project_id = owner_and_recent_project_id[msg.sender];     
+            require(_recent_project_id!=-1,"A Core Project Failed to be created");
     for (uint i = 0; i < _works.length; i++) {
-      work_and_pays[_project_id].push(Work(_works[i],_pays[i],WorkStatus.UN_INIT));    
+      work_and_pays[uint(_recent_project_id)].push(Work(_works[i],_pays[i],WorkStatus.UN_INIT));    
     }
     return true;
 }
@@ -374,6 +383,26 @@ function addWorksAndPays(uint _project_id,string[] memory _works,uint[] memory _
         return projects;
     }
     
+    function getTasksAndPays(uint _project_id)public view returns (string[] memory,uint[] memory,uint ) {
+        Work[] memory works  = work_and_pays[_project_id];
+    require(works.length > 0 ,"A Project Should have atleast one task");
+    int on_going_i=0;  
+    string[] memory tasks = new string[](works.length);
+    uint[] memory pays = new uint[](works.length);  
+    bool set=false;
+    for (uint i=0;  i < works.length ; i++) {
+        if( !set &&  works[i].status  != WorkStatus.COMPLETED){
+               on_going_i = int(i)-1;
+               set=true; 
+        }
+        tasks[i] = works[i].task;
+        pays[i] = works[i].pay;
+    }
+    if(on_going_i == -1){
+        on_going_i=0;
+    }
+        return (tasks,pays,uint(on_going_i));
+    }
 
     function getOngoingTaskAndPaymentTillNow(uint project_id) public view returns (string memory,uint,uint){
     Work[] memory works  = work_and_pays[project_id];
