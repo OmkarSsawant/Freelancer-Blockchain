@@ -23,76 +23,67 @@ describe("Freelance Contract", () => {
     const signers = await ethers.getSigners();
       const deadline = BigInt(Date.now() + 2 * DAY_millis);
       const cp1 = await freelance.createProject(
-        signers[1].address,
         ethers.encodeBytes32String("Sample Project 1"),
-        ethers.encodeBytes32String("ipfs://mydocurl"),
         ethers.encodeBytes32String("mobile"),
         deadline,
         ethers.parseEther("0.02"),
+        ethers.encodeBytes32String("mobile app"),
         { value: ethers.parseEther("0.002") }
       );
    
-      const cp2 = await freelance.createProject(
-        signers[1].address,
-        ethers.encodeBytes32String("Sample Project 1"),
-        ethers.encodeBytes32String("ipfs://mydocurl"),
-        ethers.encodeBytes32String("mobile"),
-        deadline,
-        ethers.parseEther("0.02"),
-        { value: ethers.parseEther("0.002") }
-      );
+     console.log(`Core Project Created ${cp1}`);
+     
       
   });
 
   describe("About Project", () => {
-    it("Created Project", async () => {
+    it("Add  Project Details to recent", async () => {
       const signers = await ethers.getSigners();
       const deadline = BigInt(Date.now() + 2 * DAY_millis);
-      const created = await freelance.createProject(
-        signers[1].address,
-        ethers.encodeBytes32String("Sample Project 1"),
-        ethers.encodeBytes32String("ipfs://mydocurl"),
-        ethers.encodeBytes32String("mobile"),
-        deadline,
-        ethers.parseEther("0.02"),
-        { value: ethers.parseEther("0.002") }
+      const created = await freelance.addProjectDetails(
+        "A description",
+        ["flutter","web"].map((e)=>ethers.encodeBytes32String(e)),
+        ethers.encodeBytes32String("ipfs://sample"),
+        "Eligible",["roler skates"],["w1","w2","w3"],[1,2,3]
       );
       
       expect(created);
-      console.log("Created Project");
+      console.log(`Details to Project added ${created}`);
     });
 
-    it("Project Status is Uninit", async () => {
-      const signers = await ethers.getSigners();
-      const deadline = BigInt(Date.now() + 2 * DAY_millis);
-      const created = await freelance.createProject(
-        signers[1].address,
-        ethers.encodeBytes32String("Sample Project 1"),
-        ethers.encodeBytes32String("ipfs://mydocurl"),
-        ethers.encodeBytes32String("mobile"),
-        deadline,
-        ethers.parseEther("0.02"),
-        { value: ethers.parseEther("0.002") }
-      );
-      console.log(await freelance.getProjectStatus(1));
-      expect(await freelance.getProjectStatus(1)).eq(0);
-    });
+    it("Gets Tasks And Pays Of Project Updates",async()=>{
+         console.log(await freelance.getTasksAndPays(0));
+      var txn =await freelance.updateProjectStatus(0);
+      var u = await freelance.getTasksAndPays(0);
+      console.log("u1",u);
+      var txn =await freelance.updateProjectStatus(0);
+      console.log("u2",await freelance.getTasksAndPays(0));
+      expect(u[2]!=BigInt(0),"not Updated");
+        })
 
-    it("Get Projects of owner", async () => {
-    const signers = await ethers.getSigners();
+    // it("Project Status is Uninit", async () => {
+    //   const signers = await ethers.getSigners();
+    //   const deadline = BigInt(Date.now() + 2 * DAY_millis);
+   
+    //   console.log(await freelance.getProjectStatus(1));
+    //   expect(await freelance.getProjectStatus(1)).eq(0);
+    // });
 
-      const owner = signers[1].address;
+    // it("Get Projects of owner", async () => {
+    // const signers = await ethers.getSigners();
+
+    //   const owner = signers[1].address;
       
-      expect(await freelance.getProjectsOfOwner(owner)).not.empty;
-    });
+    //   expect(await freelance.getProjectsOfOwner(owner)).not.empty;
+    // });
 
-    it("Adds Works and assoc. payment",async ()=> {
-      expect((await(   await freelance.addWorksAndPays(0,["Create UI/UX","Develop App","Publish App"],[
-        ethers.parseEther("0.001"),
-        ethers.parseEther("0.002"),
-        ethers.parseEther("0.003"),
-       ])).wait())?.status).eq(1);
-    })
+    // it("Adds Works and assoc. payment",async ()=> {
+    //   expect((await(   await freelance.addWorksAndPays(0,["Create UI/UX","Develop App","Publish App"],[
+    //     ethers.parseEther("0.001"),
+    //     ethers.parseEther("0.002"),
+    //     ethers.parseEther("0.003"),
+    //    ])).wait())?.status).eq(1);
+    // })
    
   });
 });

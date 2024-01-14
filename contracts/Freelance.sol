@@ -187,6 +187,11 @@ function updateProjectStatus(
     //update to next stage
     Work storage w = work_and_pays[project_id][i];
     w.status = WorkStatus.COMPLETED;
+
+    if(i==works.length-1){
+        //It was Last Work
+        projects[project_id].status = WorkStatus.COMPLETED;
+    }
     _updated=  true;
 }
 
@@ -386,22 +391,26 @@ function addWorksAndPays(string[] memory _works,uint[] memory _pays)
     function getTasksAndPays(uint _project_id)public view returns (string[] memory,uint[] memory,uint ) {
         Work[] memory works  = work_and_pays[_project_id];
     require(works.length > 0 ,"A Project Should have atleast one task");
-    int on_going_i=0;  
+    uint on_going_i=0;  
     string[] memory tasks = new string[](works.length);
     uint[] memory pays = new uint[](works.length);  
     bool set=false;
     for (uint i=0;  i < works.length ; i++) {
         if( !set &&  works[i].status  != WorkStatus.COMPLETED){
-               on_going_i = int(i)-1;
+               on_going_i = i;
                set=true; 
         }
         tasks[i] = works[i].task;
         pays[i] = works[i].pay;
     }
-    if(on_going_i == -1){
-        on_going_i=0;
+   
+    for (uint i = 0; i < pays.length; i++) {
+        console.log("task",i,tasks[i]);
+        console.log("pay",i,pays[i]);
     }
-        return (tasks,pays,uint(on_going_i));
+
+    console.log("ongoing ",set,on_going_i);
+        return (tasks,pays,on_going_i);
     }
 
     function getOngoingTaskAndPaymentTillNow(uint project_id) public view returns (string memory,uint,uint){
