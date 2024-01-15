@@ -105,9 +105,9 @@ struct Bid {
 
     mapping(uint => ProjectDetails) private project_details;
 
-    ProjectOwner[] private project_owners;
+    mapping(address=>ProjectOwner) private project_owners;
     Project[] private projects;
-    Developer[] private developers;
+    mapping(address=>Developer) private developers;
 
     constructor() {
         platform_owner = msg.sender;
@@ -129,7 +129,7 @@ struct Bid {
 
 
 // About Project Owner
-
+uint last_po_id=0;
 function registerProjectOwner(
         bytes32 _name,
         bytes32 _email,
@@ -142,7 +142,8 @@ function registerProjectOwner(
         bytes32 _profile_photo_ipfs
 )  authorizedByDao(msg.sender) public returns (bool _registered) {
     ProjectOwner memory po ;
-    po.owner_id = project_owners.length;
+    last_po_id+=1;
+    po.owner_id = last_po_id;
     po.name = _name;
     po.email = _email;
     po.phn = _phn;
@@ -153,7 +154,7 @@ function registerProjectOwner(
     po.url = _url;
     po.com_type = _com_type;
     po.profile_photo_ipfs = _profile_photo_ipfs;
-    project_owners.push(po);
+    project_owners[msg.sender] = po;
     emit ProjectOwnerRegistered(msg.sender);
     _registered  = true;
 }
@@ -316,9 +317,12 @@ function addWorksAndPays(string[] memory _works,uint[] memory _pays)
           return projects[project_id].status;  
     }
 
+function isOwnerRegisered() public view returns (bool){
+    return project_owners[msg.sender].owner_id!=0;//as ids start from 1
+}
 
 // About Developer ========================================================
-    
+  uint last_dev_id=0;  
     function registerDeveloper(
         bytes32 _name,
         bytes32 _profile_photo_ipfs,
@@ -327,20 +331,23 @@ function addWorksAndPays(string[] memory _works,uint[] memory _pays)
     )
     public returns (bool ){
             Developer memory dev ;
-            
-            dev.dev_id = developers.length;
+            last_dev_id+=1;
+            dev.dev_id = last_dev_id;
             dev.dev_address = msg.sender;
             dev.name = _name;
             dev.profile_photo_ipfs = _profile_photo_ipfs;
             dev.techstack = _techstack;
             dev.profession = _profession;
-            developers.push(dev);
+            developers[msg.sender] = dev;
             dev_and_id[msg.sender] = dev.dev_id;
             dev_and_bidtokens[msg.sender]  = 50;
             return true;
 
     }
 
+function isDevRegistered() public view returns (bool){
+    return developers[msg.sender].dev_id!=0;//as ids start from 1
+}
     //starting the work signifies that dev has signed the agreement
     function signAgreement(uint project_id) public onlyDev returns (bool _success) {
         Project storage p = projects[project_id];
